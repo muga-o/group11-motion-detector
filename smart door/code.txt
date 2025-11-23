@@ -1,0 +1,122 @@
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+#include <Servo.h>
+
+// LCD
+LiquidCrystal_I2C lcd(0x3F, 16, 2);
+
+// Pins
+int correctBtn = 7;     // Button simulating correct fingerprint
+int wrongBtn = 8;       // Button simulating wrong fingerprint
+int servoPin = 9;       // Servo
+
+// Variables
+Servo lockServo;
+bool doorLocked = true;
+
+void setup() {
+  // Serial communication for passcode input
+  Serial.begin(9600);
+  
+  // Button pins
+  pinMode(correctBtn, INPUT);
+  pinMode(wrongBtn, INPUT);
+
+  // Servo
+  lockServo.attach(servoPin);
+  lockServo.write(0);  // Door locked position
+
+  // LCD
+  lcd.init();
+  lcd.backlight();
+  lcd.setCursor(0, 0);
+  lcd.print("Smart Door Lock");
+  lcd.setCursor(0, 1);
+  lcd.print("Initializing...");
+  delay(1000);
+  lcd.clear();
+  
+  showLockedMessage();
+}
+
+void loop() {
+  // 📌 BUTTON 1 → Correct Fingerprint
+  if (digitalRead(correctBtn) == HIGH) {
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("Fingerprint OK");
+    lcd.setCursor(0, 1);
+    lcd.print("Door Opening");
+    
+    lockServo.write(90);   // Open door
+    delay(2000);
+
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("Door Open");
+    lcd.setCursor(0, 1);
+    lcd.print("Welcome!");
+    delay(2000);
+
+    // Lock again
+    lockServo.write(0);
+    showLockedMessage();
+  }
+
+  // ❌ BUTTON 2 → Wrong Fingerprint
+  if (digitalRead(wrongBtn) == HIGH) {
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("Fingerprint ");
+    lcd.setCursor(0, 1);
+    lcd.print("NOT Recognized");
+    delay(1000);
+
+    showLockedMessage();
+  }
+
+  // 🔢 Serial Passcode Input
+  if (Serial.available() > 0) {
+    String input = Serial.readStringUntil('\n');
+    input.trim();  // Remove any leading/trailing whitespace
+    
+    if (input == "1234") {
+      // Correct passcode
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("Passcode OK");
+      lcd.setCursor(0, 1);
+      lcd.print("Door Opening");
+      
+      lockServo.write(90);   // Open door
+      delay(2000);
+      
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("Door Open");
+      lcd.setCursor(0, 1);
+      lcd.print("Welcome!");
+      delay(2000);
+      
+      // Lock again
+      lockServo.write(0);
+      showLockedMessage();
+    } else {
+      // Wrong passcode
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("Wrong Passcode");
+      delay(1000);
+      showLockedMessage();
+    }
+  }
+}
+
+// Display "Door Locked" message
+void showLockedMessage() {
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Door is LOCKED");
+  lcd.setCursor(0, 1);
+  lcd.print("Scan Finger...");
+}
